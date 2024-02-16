@@ -1,4 +1,4 @@
-# ls-annotation-autocue
+# ls-annotate-autocue
 This Liquidsoap protocol introduces EBU R128 / LUFS compliant auto cue and crossfades based on volume/loudness thresholds.
 
 ## Requirements
@@ -7,10 +7,10 @@ This Liquidsoap protocol introduces EBU R128 / LUFS compliant auto cue and cross
 
 ## Usage
 
- Just use `annotation-autocue` the same way as the well known `annotation` protocol:
+ Just use `annotate-autocue` the same way as the well known `annotate` protocol:
 
-`annotation-autocue:title="Talkin' Bout A Revolution",artist="Tracy Chapman":/path/tracy_chapman_-_talkin_bout_a_revolution.mp3`
+`annotate-autocue:title="Talkin' Bout A Revolution",artist="Tracy Chapman":/path/tracy_chapman_-_talkin_bout_a_revolution.mp3`
 
 It will do it's magic will turn the annotation/request into something like this:
 
-`annotation:liq_amplify="-5.163 dB",liq_cue_in="0.7",liq_cue_out="158.",liq_cross_duration="4.5",liq_fade_in="0.2",liq_fade_out="4.5",liq_fade_in_curve="log",liq_fade_out_curve="exp",title="Talkin' Bout A Revolution",artist="Tracy Chapman":/path/tracy_chapman_-_talkin_bout_a_revolution.mp3`
+`annotate:liq_amplify="-5.163 dB",liq_cue_in="0.7",liq_cue_out="158.",liq_cross_duration="4.5",liq_fade_in="0.2",liq_fade_out="4.5",liq_fade_in_curve="log",liq_fade_out_curve="exp",title="Talkin' Bout A Revolution",artist="Tracy Chapman":/path/tracy_chapman_-_talkin_bout_a_revolution.mp3`
