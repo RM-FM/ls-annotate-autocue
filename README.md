@@ -1,8 +1,8 @@
 # ls-annotate-autocue
-This Liquidsoap protocol introduces [EBU R128](https://en.wikipedia.org/wiki/EBU_R_128#:~:text=EBU%20R%20128%20is%20a,measure%20and%20control%20programme%20loudness.) / [LUFS](https://en.wikipedia.org/wiki/LUFS#:~:text=Loudness%2C%20K%2Dweighted%2C%20relative,video%20and%20music%20streaming%20services.) compliant auto cue and crossfade based on volume/loudness thresholds.
+This Liquidsoap protocol introduces [EBU R 128](https://en.wikipedia.org/wiki/EBU_R_128#:~:text=EBU%20R%20128%20is%20a,measure%20and%20control%20programme%20loudness.) / [LUFS](https://en.wikipedia.org/wiki/LUFS#:~:text=Loudness%2C%20K%2Dweighted%2C%20relative,video%20and%20music%20streaming%20services.) compliant auto cue and crossfade based on volume/loudness thresholds.
 
 ## Features
-* LUFS loudness normalization based on EBU R128: `liq_amplify`
+* LUFS loudness normalization based on EBU R 128: `liq_amplify`
 * Cue point detection: `liq_cue_in`, `liq_cue_out`
 * Situational crossfade/overlap detection: `liq_cross_duration`, `liq_fade_in`, `liq_fade_in_curve`, `liq_fade_out`, `liq_fade_in_curve`, `liq_fade_out_delay`)
 
