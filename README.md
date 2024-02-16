@@ -1,8 +1,9 @@
 # ls-annotate-autocue
 This Liquidsoap protocol introduces EBU R128 / LUFS compliant auto cue and crossfades based on volume/loudness thresholds.
 
-* Requires Liquidsoap 2.2.4+
-* ffprobe binary installed
+## Requirements
+* Liquidsoap 2.2.4 or later
+* ffprobe binary
 
  Just use `annotate_autocue` the same way as the well known `annotate` protocol:
 
