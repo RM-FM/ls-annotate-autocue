@@ -6,6 +6,14 @@ This Liquidsoap protocol introduces EBU R128 / LUFS compliant auto cue and cross
 * Cue point detection: `liq_cue_in`, `liq_cue_out`
 * Situational crossfade/overlap detection: `liq_cross_duration`, `liq_fade_in`, `liq_fade_in_curve`, `liq_fade_out`, `liq_fade_in_curve`, `liq_fade_out_delay`)
 
+Cue/crossfade points are LUFS target difference corrected. This ensures consistent detection of cue points for both loud an quiet songs.
+
+### Configuration options
+* Target loudness LUFS
+* Cue in threshold
+* Cue out threshold
+* Crossfade threshold
+
 ## Requirements
 * Liquidsoap 2.2.4 or later
 * ffprobe binary
