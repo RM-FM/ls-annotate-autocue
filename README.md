@@ -9,7 +9,7 @@ This Liquidsoap protocol introduces [EBU R 128](https://en.wikipedia.org/wiki/EB
 Cue/crossfade points are LUFS target difference corrected. This ensures consistent detection of cue points for both loud an quiet songs.
 
 ### Configuration options
-* Target loudness LUFS
+* LUFS target loudness
 * Cue in threshold
 * Cue out threshold
 * Crossfade threshold
