@@ -5,6 +5,8 @@ This Liquidsoap protocol introduces EBU R128 / LUFS compliant auto cue and cross
 * Liquidsoap 2.2.4 or later
 * ffprobe binary
 
+## Usage
+
  Just use `annotate_autocue` the same way as the well known `annotate` protocol:
 
 `annotate_autocue:title="Talkin' Bout A Revolution",artist="Tracy Chapman":/path/tracy_chapman_-_talkin_bout_a_revolution.mp3`
