@@ -1,23 +1,23 @@
-# Initilize settings for annotation-autocue protocol
-let settings.protocol.annotation-autocue = settings.make.protocol("annotation-autocue")
+# Initilize settings for annotate-autocue protocol
+let settings.protocol.annotate-autocue = settings.make.protocol("annotate-autocue")
 
-let settings.protocol.annotation-autocue.lufs_target =
+let settings.protocol.annotate-autocue.lufs_target =
   settings.make(description="Loudness target in LUFS (float)", -18.0)
   
-let settings.protocol.annotation-autocue.cue_in_thresh =
+let settings.protocol.annotate-autocue.cue_in_thresh =
   settings.make(description="Threshold for Cue In in dB (float)", -30.0)
   
-let settings.protocol.annotation-autocue.cue_out_thresh =
+let settings.protocol.annotate-autocue.cue_out_thresh =
   settings.make(description="Threshold for Cue In in dB (float)", -38.0)
   
-let settings.protocol.annotation-autocue.cross_thresh =
+let settings.protocol.annotate-autocue.cross_thresh =
   settings.make(description="Threshold for Crossfade start in dB (float)", -14.0)
   
-let settings.protocol.annotation-autocue.max_overlap =
+let settings.protocol.annotate-autocue.max_overlap =
   settings.make(description="Max. allowed overlap/crossfade in seconds (float)", 6.0)
 
 # Change default setting
-settings.protocol.annotation-autocue.lufs_target := -16.0
+settings.protocol.annotate-autocue.lufs_target := -16.0
 
 # Do the auto cue magic
 def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap) =
@@ -27,8 +27,8 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
   result = process.read.lines(command)
   json_payload = string.concat(result)
   
-  log(level=4,label="annotation-autocue","#{command}")
-  log(level=4,label="annotation-autocue","#{json_payload}")
+  log(level=4,label="annotate-autocue","#{command}")
+  log(level=4,label="annotate-autocue","#{json_payload}")
   
   # Parse required data from JSON string
   let json.parse ({
@@ -62,10 +62,10 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
   adj_cue_out_thresh = cue_out_thresh + lufs_correction
   adj_cross_thresh = cross_thresh + lufs_correction
   
-  log(level=4,label="annotation-autocue","lufs_correction: #{lufs_correction}")
-  log(level=4,label="annotation-autocue","adj_cue_in_thresh: #{adj_cross_thresh}")
-  log(level=4,label="annotation-autocue","adj_cue_out_thresh: #{adj_cross_thresh}")
-  log(level=4,label="annotation-autocue","adj_cross_thresh: #{adj_cross_thresh}")
+  log(level=4,label="annotate-autocue","lufs_correction: #{lufs_correction}")
+  log(level=4,label="annotate-autocue","adj_cue_in_thresh: #{adj_cross_thresh}")
+  log(level=4,label="annotate-autocue","adj_cue_out_thresh: #{adj_cross_thresh}")
+  log(level=4,label="annotate-autocue","adj_cross_thresh: #{adj_cross_thresh}")
   
   # Set cue/fade defaults
   cue_in = ref(0.)
@@ -177,28 +177,28 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
   cue_meta := "#{cue_meta()}liq_fade_in_curve=\"#{fade_in_curve()}\","  
   cue_meta := "#{cue_meta()}liq_fade_out_curve=\"#{fade_out_curve()}\","  
 
-  log(level=3,label="annotation-autocue","#{string.sub(cue_meta(),start=0,length=string.length(cue_meta())-1)}")
+  log(level=3,label="annotate-autocue","#{string.sub(cue_meta(),start=0,length=string.length(cue_meta())-1)}")
   
   # Return metadata for annotation injection
   cue_meta()
   
 end
 
-# Define annotation-autocue protocol
-def annotation-autocue_protocol(~rlog=_,~maxtime=_,arg) =
+# Define annotate-autocue protocol
+def annotate-autocue_protocol(~rlog=_,~maxtime=_,arg) =
 
   # Get protocol settings
-  lufs_target = settings.protocol.annotation-autocue.lufs_target()
-  cue_in_thresh = settings.protocol.annotation-autocue.cue_in_thresh()
-  cue_out_thresh = settings.protocol.annotation-autocue.cue_out_thresh()
-  cross_thresh = settings.protocol.annotation-autocue.cross_thresh()
-  max_overlap = settings.protocol.annotation-autocue.max_overlap()
+  lufs_target = settings.protocol.annotate-autocue.lufs_target()
+  cue_in_thresh = settings.protocol.annotate-autocue.cue_in_thresh()
+  cue_out_thresh = settings.protocol.annotate-autocue.cue_out_thresh()
+  cross_thresh = settings.protocol.annotate-autocue.cross_thresh()
+  max_overlap = settings.protocol.annotate-autocue.max_overlap()
 
-  log(level=4,label="annotation-autocue","lufs_target: #{lufs_target}")
-  log(level=4,label="annotation-autocue","cue_in_thresh: #{cue_in_thresh}")
-  log(level=4,label="annotation-autocue","cue_out_thresh: #{cue_out_thresh}")
-  log(level=4,label="annotation-autocue","cross_thresh: #{cross_thresh}")
-  log(level=4,label="annotation-autocue","max_overlap: #{max_overlap}")
+  log(level=4,label="annotate-autocue","lufs_target: #{lufs_target}")
+  log(level=4,label="annotate-autocue","cue_in_thresh: #{cue_in_thresh}")
+  log(level=4,label="annotate-autocue","cue_out_thresh: #{cue_out_thresh}")
+  log(level=4,label="annotate-autocue","cross_thresh: #{cross_thresh}")
+  log(level=4,label="annotate-autocue","max_overlap: #{max_overlap}")
   
   skip_autocue = ref(false)
   
@@ -213,9 +213,9 @@ def annotation-autocue_protocol(~rlog=_,~maxtime=_,arg) =
   # Workaround for Azuracast Stations
   try
     filepath := "#{station_media_dir}/#{filename}"
-    log(level=4,label="annotation-autocue","Azuracast station! Adding station media directory to filename: #{station_media_dir}/#{filename}")
+    log(level=4,label="annotate-autocue","Azuracast station! Adding station media directory to filename: #{station_media_dir}/#{filename}")
   catch _ do
-    log(level=4,label="annotation-autocue","Not an Azuracast station! Using filename as provided in annotation: #{filename}")
+    log(level=4,label="annotate-autocue","Not an Azuracast station! Using filename as provided in annotation: #{filename}")
   end
   
   # Checking for existing cue/cross/fade values
@@ -223,7 +223,7 @@ def annotation-autocue_protocol(~rlog=_,~maxtime=_,arg) =
     metadata_key = fst(part)
     skip_autocue := false
     if r/liq_(cue|cross|fade)/i.test((metadata_key)) then
-      log(level=3,label="annotation-autocue","Skipping autocue because of existing cue/cross/fade metadata: #{part}")
+      log(level=3,label="annotate-autocue","Skipping autocue because of existing cue/cross/fade metadata: #{part}")
       skip_autocue := true
     end
     skip_autocue()
@@ -231,7 +231,7 @@ def annotation-autocue_protocol(~rlog=_,~maxtime=_,arg) =
   skip_autocue := list.exists(find_existing_meta, fst(annotate_parts))  
   
   if file.exists(filepath()) == false then
-    log(level=1,label="annotation-autocue","Autocue aborted! File not found: #{filepath()}")
+    log(level=1,label="annotate-autocue","Autocue aborted! File not found: #{filepath()}")
     skip_autocue := true
   end
   
@@ -241,7 +241,7 @@ def annotation-autocue_protocol(~rlog=_,~maxtime=_,arg) =
     cue_meta = get_autocue(filepath(),lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
     # Rebuild and return annotation string
     autocue_annotate := "annotate:#{cue_meta}#{arg}"   
-    log(level=4,label="annotation-autocue","#{autocue_annotate}")
+    log(level=4,label="annotate-autocue","#{autocue_annotate}")
   else
     autocue_annotate := "annotate:#{arg}"   
   end
@@ -250,10 +250,10 @@ def annotation-autocue_protocol(~rlog=_,~maxtime=_,arg) =
   
 end
 
-# Add annotation-autocue protocol
+# Add annotate-autocue protocol
 protocol.add(
-    "annotation-autocue",
-    annotation-autocue_protocol,
+    "annotate-autocue",
+    annotate-autocue_protocol,
     doc="Adding auto cues/crossfade to annotation",
-    syntax="annotation-autocue:uri"
+    syntax="annotate-autocue:uri"
 )
