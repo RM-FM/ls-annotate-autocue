@@ -16,7 +16,7 @@ Cue/crossfade points are LUFS target difference corrected. This ensures consiste
 
 ## Requirements
 * [Liquidsoap 2.2.4](https://github.com/savonet/liquidsoap/releases) or later
-* [ffprobe](https://ffbinaries.com/downloads) binary
+* [ffprobe binary](https://ffbinaries.com/downloads)
 
 ## Usage
 
