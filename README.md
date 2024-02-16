@@ -2,9 +2,9 @@
 This Liquidsoap protocol introduces EBU R128 / LUFS compliant auto cue and crossfades based on volume/loudness thresholds.
 
 ## Features
-* LUFS loudness normalization based on EBU R128 (liq_amplify)
-* Cue point detection (liq_cue_in, liq_cue_out)
-* Situational crossfade/overlap detection (liq_cross_duration, liq_fade_in, liq_fade_in_curve, liq_fade_out, liq_fade_in_curve, liq_fade_out_delay)
+* LUFS loudness normalization based on EBU R128 (`liq_amplify`)
+* Cue point detection (`liq_cue_in`, `liq_cue_out`)
+* Situational crossfade/overlap detection (`liq_cross_duration`, `liq_fade_in`, `liq_fade_in_curve`, `liq_fade_out`, `liq_fade_in_curve`, `liq_fade_out_delay`)
 
 ## Requirements
 * Liquidsoap 2.2.4 or later
