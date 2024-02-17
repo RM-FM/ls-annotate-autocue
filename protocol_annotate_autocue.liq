@@ -1,23 +1,23 @@
 # Initilize settings for annotate-autocue protocol
-let settings.protocol.annotate-autocue = settings.make.protocol("annotate-autocue")
+let settings.protocol.annotate_autocue = settings.make.protocol("annotate-autocue")
 
-let settings.protocol.annotate-autocue.lufs_target =
+let settings.protocol.annotate_autocue.lufs_target =
   settings.make(description="Loudness target in LUFS (float)", -18.0)
   
-let settings.protocol.annotate-autocue.cue_in_thresh =
-  settings.make(description="Threshold for Cue In in dB (float)", -30.0)
+let settings.protocol.annotate_autocue.cue_in_thresh =
+  settings.make(description="Threshold for Cue In in dB (float)", -28.0)
   
-let settings.protocol.annotate-autocue.cue_out_thresh =
-  settings.make(description="Threshold for Cue In in dB (float)", -38.0)
+let settings.protocol.annotate_autocue.cue_out_thresh =
+  settings.make(description="Threshold for Cue In in dB (float)", -36.0)
   
-let settings.protocol.annotate-autocue.cross_thresh =
-  settings.make(description="Threshold for Crossfade start in dB (float)", -14.0)
+let settings.protocol.annotate_autocue.cross_thresh =
+  settings.make(description="Threshold for Crossfade start in dB (float)", -8.0)
   
-let settings.protocol.annotate-autocue.max_overlap =
+let settings.protocol.annotate_autocue.max_overlap =
   settings.make(description="Max. allowed overlap/crossfade in seconds (float)", 6.0)
 
-# Change default setting
-settings.protocol.annotate-autocue.lufs_target := -16.0
+# Change default setting if needed
+settings.protocol.annotate_autocue.lufs_target := -16.0
 
 # Do the auto cue magic
 def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap) =
@@ -35,16 +35,16 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     frames = [{
       best_effort_timestamp_time,
       duration_time,
-	  tags
+    tags
     }]
   } : {
     frames: [{
       best_effort_timestamp_time: string,
       duration_time: string?,
-	  tags: {
+    tags: {
         "lavfi.r128.I" as lavfi_r128_I: string?,
         "lavfi.r128.M" as lavfi_r128_M: string?
-	  }?
+    }?
     }]
   }) = json_payload
 
@@ -57,15 +57,15 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
   # Calc LUFS difference to target for liq_amplify
   lufs_correction = lufs_target - lufs
   
-  # Adjust Cue dB thresholds by LUFS correction
-  adj_cue_in_thresh = cue_in_thresh + lufs_correction
-  adj_cue_out_thresh = cue_out_thresh + lufs_correction
-  adj_cross_thresh = cross_thresh + lufs_correction
+  # Create dB thresholds relative to LUFS target
+  lufs_cue_in_thresh = lufs + cue_in_thresh
+  lufs_cue_out_thresh = lufs + cue_out_thresh
+  lufs_cross_thresh = lufs + cross_thresh
   
   log(level=4,label="annotate-autocue","lufs_correction: #{lufs_correction}")
-  log(level=4,label="annotate-autocue","adj_cue_in_thresh: #{adj_cross_thresh}")
-  log(level=4,label="annotate-autocue","adj_cue_out_thresh: #{adj_cross_thresh}")
-  log(level=4,label="annotate-autocue","adj_cross_thresh: #{adj_cross_thresh}")
+  log(level=4,label="annotate-autocue","adj_cue_in_thresh: #{lufs_cue_in_thresh}")
+  log(level=4,label="annotate-autocue","adj_cue_out_thresh: #{lufs_cue_out_thresh}")
+  log(level=4,label="annotate-autocue","adj_cross_thresh: #{lufs_cross_thresh}")
   
   # Set cue/fade defaults
   cue_in = ref(0.)
@@ -90,16 +90,16 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     # Process only valid level values
     if db_level != "nan" then
       db_level = float_of_string(db_level)
-      if db_level > adj_cue_in_thresh and cue_in_found() == false then
+      if db_level > lufs_cue_in_thresh and cue_in_found() == false then
         # First time exceeding threshold. Set cue in to timestamp of previous frame.
         cue_in := last_ts()
         cue_in_found := true
       end
-      if db_level > adj_cue_out_thresh then
+      if db_level > lufs_cue_out_thresh then
         # Cue out: Stick with the latest timestamp where level still exceeds threshold
         cue_out := current_ts()
       end      
-      if db_level > adj_cross_thresh then
+      if db_level > lufs_cross_thresh then
         # Absolute crossfade cue: Stick with the latest timestamp where level still exceeds threshold
         cross_cue := current_ts()
       end
@@ -185,14 +185,14 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
 end
 
 # Define annotate-autocue protocol
-def annotate-autocue_protocol(~rlog=_,~maxtime=_,arg) =
+def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
 
   # Get protocol settings
-  lufs_target = settings.protocol.annotate-autocue.lufs_target()
-  cue_in_thresh = settings.protocol.annotate-autocue.cue_in_thresh()
-  cue_out_thresh = settings.protocol.annotate-autocue.cue_out_thresh()
-  cross_thresh = settings.protocol.annotate-autocue.cross_thresh()
-  max_overlap = settings.protocol.annotate-autocue.max_overlap()
+  lufs_target = settings.protocol.annotate_autocue.lufs_target()
+  cue_in_thresh = settings.protocol.annotate_autocue.cue_in_thresh()
+  cue_out_thresh = settings.protocol.annotate_autocue.cue_out_thresh()
+  cross_thresh = settings.protocol.annotate_autocue.cross_thresh()
+  max_overlap = settings.protocol.annotate_autocue.max_overlap()
 
   log(level=4,label="annotate-autocue","lufs_target: #{lufs_target}")
   log(level=4,label="annotate-autocue","cue_in_thresh: #{cue_in_thresh}")
@@ -253,7 +253,7 @@ end
 # Add annotate-autocue protocol
 protocol.add(
     "annotate-autocue",
-    annotate-autocue_protocol,
+    annotate_autocue_protocol,
     doc="Adding auto cues/crossfade to annotation",
     syntax="annotate-autocue:uri"
 )
