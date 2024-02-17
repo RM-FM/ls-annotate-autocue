@@ -5,13 +5,13 @@ let settings.protocol.annotate_autocue.lufs_target =
   settings.make(description="Loudness target in LUFS (float)", -18.0)
   
 let settings.protocol.annotate_autocue.cue_in_thresh =
-  settings.make(description="Threshold for Cue In in dB (float)", -28.0)
+  settings.make(description="Threshold for Cue In relative to LUFS (float)", -28.0)
   
 let settings.protocol.annotate_autocue.cue_out_thresh =
-  settings.make(description="Threshold for Cue In in dB (float)", -36.0)
+  settings.make(description="Threshold for Cue Out relative to LUFS (float)", -36.0)
   
 let settings.protocol.annotate_autocue.cross_thresh =
-  settings.make(description="Threshold for Crossfade start in dB (float)", -8.0)
+  settings.make(description="Threshold for Crossfade start relative to LUFS (float)", -8.0)
   
 let settings.protocol.annotate_autocue.max_overlap =
   settings.make(description="Max. allowed overlap/crossfade in seconds (float)", 6.0)
