@@ -6,7 +6,7 @@ This Liquidsoap protocol introduces [EBU R 128](https://en.wikipedia.org/wiki/EB
 * Cue point detection: `liq_cue_in`, `liq_cue_out`
 * Situational crossfade/overlap detection: `liq_cross_duration`, `liq_fade_in`, `liq_fade_in_curve`, `liq_fade_out`, `liq_fade_out_curve`, `liq_fade_out_delay`
 
-Cue/crossfade points are LUFS target difference corrected. This ensures consistent detection of cue points for both loud an quiet songs.
+Cue/crossfade points are calculated relative to LUFS target loudness. This ensures consistent detection of cue points for both loud an quiet songs.
 
 ### Configuration options
 * LUFS target loudness
