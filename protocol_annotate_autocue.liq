@@ -5,13 +5,13 @@ let settings.protocol.annotate_autocue.lufs_target =
   settings.make(description="Loudness target in LUFS (float)", -18.0)
   
 let settings.protocol.annotate_autocue.cue_in_thresh =
-  settings.make(description="Threshold for Cue In relative to LUFS (float)", -28.0)
+  settings.make(description="Threshold for Cue In relative to LUFS (float)", -34.0)
   
 let settings.protocol.annotate_autocue.cue_out_thresh =
-  settings.make(description="Threshold for Cue Out relative to LUFS (float)", -36.0)
+  settings.make(description="Threshold for Cue Out relative to LUFS (float)", -42.0)
   
 let settings.protocol.annotate_autocue.cross_thresh =
-  settings.make(description="Threshold for Crossfade start relative to LUFS (float)", -8.0)
+  settings.make(description="Threshold for Crossfade start relative to LUFS (float)", -7.0)
   
 let settings.protocol.annotate_autocue.max_overlap =
   settings.make(description="Max. allowed overlap/crossfade in seconds (float)", 6.0)
@@ -21,6 +21,8 @@ settings.protocol.annotate_autocue.lufs_target := -16.0
 
 # Do the auto cue magic
 def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap) =
+
+  cue_meta_response = ref("")
 
   # Run ffprobe EBU R128 filter to retrieve loudness data per frame 
   command = "ffprobe -v quiet -f lavfi -i amovie=#{string.quote(filepath)},ebur128=metadata=1 -show_frames -of json"
@@ -48,139 +50,153 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     }]
   }) = json_payload
 
-  # Get the 2nd last frame which is the last with loudness data
-  frame = list.nth(frames,list.length(frames)-2)
-  
-  # Get the Integrated Loudness from the last frame (overall loudness)
-  lufs = float_of_string(frame.tags.lavfi_r128_I ?? string(lufs_target))
-  
-  # Calc LUFS difference to target for liq_amplify
-  lufs_correction = lufs_target - lufs
-  
-  # Create dB thresholds relative to LUFS target
-  lufs_cue_in_thresh = lufs + cue_in_thresh
-  lufs_cue_out_thresh = lufs + cue_out_thresh
-  lufs_cross_thresh = lufs + cross_thresh
-  
-  log(level=4,label="annotate-autocue","lufs_correction: #{lufs_correction}")
-  log(level=4,label="annotate-autocue","adj_cue_in_thresh: #{lufs_cue_in_thresh}")
-  log(level=4,label="annotate-autocue","adj_cue_out_thresh: #{lufs_cue_out_thresh}")
-  log(level=4,label="annotate-autocue","adj_cross_thresh: #{lufs_cross_thresh}")
-  
-  # Set cue/fade defaults
-  cue_in = ref(0.)
-  cue_out = ref(0.)
-  cross_cue = ref(0.)
-  fade_in = ref(0.)
-  fade_in_curve = ref("log")
-  fade_out = ref(0.)
-  fade_out_delay = ref(0.)
-  fade_out_curve = ref("exp")
-  cross_dur = ref(0.)
+  ffprobe_success = ref(true)
+  try
+    if list.length(frames) <= 0 then
+      log(level=1,label="annotate-autocue","Couldn't retrieve data from ffprobe. Make sure ffprobe binary is installed and media file is valid. Skipping autocue...")
+      ffprobe_success := false
+    end
+  catch _ do
+    log(level=1,label="annotate-autocue","Couldn't parse data from ffprobe. Make sure ffprobe binary is installed. Skipping autocue...")
+    ffprobe_success := false
+  end
 
-  # Extract timestamps for cue points
-  # Iterate over loudness data frames and set cue points based on db thresholds
-  cue_in_found = ref(false)
-  last_ts = ref(0.)
-  current_ts = ref(0.)
-  def find_cues(frame) =
-    # Get current frame loudness level and timestamp
-    db_level = (frame.tags.lavfi_r128_M ?? "nan")
-    current_ts := float_of_string(frame.best_effort_timestamp_time ?? "0.")
-    # Process only valid level values
-    if db_level != "nan" then
-      db_level = float_of_string(db_level)
-      if db_level > lufs_cue_in_thresh and cue_in_found() == false then
-        # First time exceeding threshold. Set cue in to timestamp of previous frame.
-        cue_in := last_ts()
-        cue_in_found := true
+  if ffprobe_success() then
+    # Get the 2nd last frame which is the last with loudness data
+    frame = list.nth(frames,list.length(frames)-2)
+    
+    # Get the Integrated Loudness from the last frame (overall loudness)
+    lufs = float_of_string(frame.tags.lavfi_r128_I ?? string(lufs_target))
+    
+    # Calc LUFS difference to target for liq_amplify
+    lufs_correction = lufs_target - lufs
+    
+    # Create dB thresholds relative to LUFS target
+    lufs_cue_in_thresh = lufs + cue_in_thresh
+    lufs_cue_out_thresh = lufs + cue_out_thresh
+    lufs_cross_thresh = lufs + cross_thresh
+    
+    log(level=4,label="annotate-autocue","lufs_correction: #{lufs_correction}")
+    log(level=4,label="annotate-autocue","adj_cue_in_thresh: #{lufs_cue_in_thresh}")
+    log(level=4,label="annotate-autocue","adj_cue_out_thresh: #{lufs_cue_out_thresh}")
+    log(level=4,label="annotate-autocue","adj_cross_thresh: #{lufs_cross_thresh}")
+    
+    # Set cue/fade defaults
+    cue_in = ref(0.)
+    cue_out = ref(0.)
+    cross_cue = ref(0.)
+    fade_in = ref(0.)
+    fade_in_curve = ref("log")
+    fade_out = ref(0.)
+    fade_out_delay = ref(0.)
+    fade_out_curve = ref("exp")
+    cross_dur = ref(0.)
+  
+    # Extract timestamps for cue points
+    # Iterate over loudness data frames and set cue points based on db thresholds
+    cue_in_found = ref(false)
+    last_ts = ref(0.)
+    current_ts = ref(0.)
+    def find_cues(frame) =
+      # Get current frame loudness level and timestamp
+      db_level = (frame.tags.lavfi_r128_M ?? "nan")
+      current_ts := float_of_string(frame.best_effort_timestamp_time ?? "0.")
+      # Process only valid level values
+      if db_level != "nan" then
+        db_level = float_of_string(db_level)
+        if db_level > lufs_cue_in_thresh and cue_in_found() == false then
+          # First time exceeding threshold. Set cue in to timestamp of previous frame.
+          cue_in := last_ts()
+          cue_in_found := true
+        end
+        if db_level > lufs_cue_out_thresh then
+          # Cue out: Stick with the latest timestamp where level still exceeds threshold
+          cue_out := current_ts()
+        end      
+        if db_level > lufs_cross_thresh then
+          # Absolute crossfade cue: Stick with the latest timestamp where level still exceeds threshold
+          cross_cue := current_ts()
+        end
       end
-      if db_level > lufs_cue_out_thresh then
-        # Cue out: Stick with the latest timestamp where level still exceeds threshold
-        cue_out := current_ts()
-      end      
-      if db_level > lufs_cross_thresh then
-        # Absolute crossfade cue: Stick with the latest timestamp where level still exceeds threshold
-        cross_cue := current_ts()
+      # Update last timestamp value with current
+      last_ts := current_ts()
+    end
+    list.iter(find_cues, frames)
+    
+    # Get very last frame for precise track duration
+    frame = list.last(frames)
+    duration = float_of_string(frame.best_effort_timestamp_time ?? "0.") + float_of_string(string((frame.duration_time ?? "0.")))
+    
+    # Finalize cue/cross/fade values now...
+    
+    # Calc cross/overlap duration
+    if cross_cue() + 0.1 < duration then
+      if cue_out() > 0. then
+        cross_dur := cue_out() - cross_cue()
+      else
+        cross_dur := duration - cross_cue()
       end
     end
-    # Update last timestamp value with current
-    last_ts := current_ts()
-  end
-  list.iter(find_cues, frames)
-  
-  # Get very last frame for precise track duration
-  frame = list.last(frames)
-  duration = float_of_string(frame.best_effort_timestamp_time ?? "0.") + float_of_string(string((frame.duration_time ?? "0.")))
-  
-  # Finalize cue/cross/fade values now...
-  
-  # Calc cross/overlap duration
-  if cross_cue() + 0.1 < duration then
-    if cue_out() > 0. then
-      cross_dur := cue_out() - cross_cue()
-    else
-      cross_dur := duration - cross_cue()
+    
+    # Add some margin to cue in
+    cue_in := cue_in() - 0.1  
+    # Avoid hard cuts on cue in
+    if cue_in() > 0.2 then
+      fade_in := 0.2
+      cue_in := cue_in() - 0.2
     end
+    # Ignore super short cue in
+    if cue_in() <= 0.2 then
+      fade_in := 0.
+      cue_in := 0.
+    end
+    # Catch invalid cue out values
+    if cue_out() <= cue_in() then cue_out := 0. end 
+    # Set fade out equal to crossfade/overlap
+    if cross_dur() > 0. then fade_out := cross_dur() end
+    
+    # Limit overlap duration to maximum
+    if cross_dur() > max_overlap then
+      cue_shift = cross_dur() - max_overlap
+      cue_out := cue_out() - cue_shift
+      cross_dur := max_overlap
+      fade_out := max_overlap
+    end  
+    
+    # Delay fade out slighly on short overlaps
+    if cue_out() > 0. and cross_dur() < 2.0 then
+      fade_out := max(cross_dur()/2., 0.1)
+      fade_out_delay := fade_out()
+    end
+      
+    # Force minimum overlap to avoid invalid crossfades
+    cross_dur := max(cross_dur(),0.1)
+    fade_in := max(fade_in(),0.1)
+    fade_out := max(fade_out(),0.1)
+    
+    # Build annotation compliant string with metadata
+    cue_meta = ref("")
+    cue_meta := "#{cue_meta()}liq_amplify=\"#{string(lufs_correction)} dB\","
+    if cue_in() > 0. then cue_meta := "#{cue_meta()}liq_cue_in=\"#{cue_in()}\"," end
+    if cue_out() > 0. then cue_meta := "#{cue_meta()}liq_cue_out=\"#{cue_out()}\"," end
+    cue_meta := "#{cue_meta()}liq_cross_duration=\"#{cross_dur()}\","
+    cue_meta := "#{cue_meta()}liq_fade_in=\"#{fade_in()}\","
+    cue_meta := "#{cue_meta()}liq_fade_out=\"#{fade_out()}\","
+    if fade_out_delay() > 0. then
+      cue_meta := "#{cue_meta()}liq_fade_out_delay=\"#{fade_out_delay()}\","
+      fade_out_curve := "log"
+    end
+    cue_meta := "#{cue_meta()}liq_fade_in_curve=\"#{fade_in_curve()}\","  
+    cue_meta := "#{cue_meta()}liq_fade_out_curve=\"#{fade_out_curve()}\","  
+  
+    log(level=3,label="annotate-autocue","#{string.sub(cue_meta(),start=0,length=string.length(cue_meta())-1)}")
+    
+    # Return metadata for annotation injection
+    cue_meta_response := cue_meta()
+    
   end
   
-  # Add some margin to cue in
-  cue_in := cue_in() - 0.1  
-  # Avoid hard cuts on cue in
-  if cue_in() > 0.2 then
-    fade_in := 0.2
-    cue_in := cue_in() - 0.2
-  end
-  # Ignore super short cue in
-  if cue_in() <= 0.2 then
-    fade_in := 0.
-    cue_in := 0.
-  end
-  # Catch invalid cue out values
-  if cue_out() <= cue_in() then cue_out := 0. end 
-  # Set fade out equal to crossfade/overlap
-  if cross_dur() > 0. then fade_out := cross_dur() end
-  
-  # Limit overlap duration to maximum
-  if cross_dur() > max_overlap then
-    cue_shift = cross_dur() - max_overlap
-    cue_out := cue_out() - cue_shift
-    cross_dur := max_overlap
-    fade_out := max_overlap
-  end  
-  
-  # Delay fade out slighly on short overlaps
-  if cue_out() > 0. and cross_dur() < 2.0 then
-    fade_out := max(cross_dur()/2., 0.1)
-    fade_out_delay := fade_out()
-  end
-  
-  # Force minimal overlap to prevent invalid crossfade
-  if cross_dur() <= 0. then
-    cross_dur := 0.2
-    fade_out := 0.
-    fade_out_delay := 0.2
-  end
-  
-  # Build annotation compliant string with metadata
-  cue_meta = ref("")
-  cue_meta := "#{cue_meta()}liq_amplify=\"#{string(lufs_correction)} dB\","
-  if cue_in() > 0. then cue_meta := "#{cue_meta()}liq_cue_in=\"#{cue_in()}\"," end
-  if cue_out() > 0. then cue_meta := "#{cue_meta()}liq_cue_out=\"#{cue_out()}\"," end
-  cue_meta := "#{cue_meta()}liq_cross_duration=\"#{cross_dur()}\","
-  cue_meta := "#{cue_meta()}liq_fade_in=\"#{fade_in()}\","
-  cue_meta := "#{cue_meta()}liq_fade_out=\"#{fade_out()}\","
-  if fade_out_delay() > 0. then
-    cue_meta := "#{cue_meta()}liq_fade_out_delay=\"#{fade_out_delay()}\","
-    fade_out_curve := "log"
-  end
-  cue_meta := "#{cue_meta()}liq_fade_in_curve=\"#{fade_in_curve()}\","  
-  cue_meta := "#{cue_meta()}liq_fade_out_curve=\"#{fade_out_curve()}\","  
-
-  log(level=3,label="annotate-autocue","#{string.sub(cue_meta(),start=0,length=string.length(cue_meta())-1)}")
-  
-  # Return metadata for annotation injection
-  cue_meta()
+  cue_meta_response()
   
 end
 
