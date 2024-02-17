@@ -24,31 +24,8 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
 
   cue_meta_response = ref("")
 
-  # Run ffprobe EBU R128 filter to retrieve loudness data per frame 
-  command = "ffprobe -v quiet -f lavfi -i amovie=#{string.quote(filepath)},ebur128=metadata=1 -show_frames -of json"
-  result = process.read.lines(command)
-  json_payload = string.concat(result)
-  
-  log(level=4,label="annotate-autocue","#{command}")
-  log(level=4,label="annotate-autocue","#{json_payload}")
-  
-  # Parse required data from JSON string
-  let json.parse ({
-    frames = [{
-      best_effort_timestamp_time,
-      duration_time,
-    tags
-    }]
-  } : {
-    frames: [{
-      best_effort_timestamp_time: string,
-      duration_time: string?,
-    tags: {
-        "lavfi.r128.I" as lavfi_r128_I: string?,
-        "lavfi.r128.M" as lavfi_r128_M: string?
-    }?
-    }]
-  }) = json_payload
+  # Run LS ffmpeg EBU R128 filter to retrieve loudness data per frame
+  frames = ebur128_frames(filepath)
 
   ffprobe_success = ref(true)
   try
