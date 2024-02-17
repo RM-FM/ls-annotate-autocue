@@ -13,6 +13,7 @@ Cue/crossfade points are calculated relative to LUFS target loudness. This ensur
 * Cue in threshold
 * Cue out threshold
 * Crossfade threshold
+* Maximum crossfade/overlap duration
 
 ## Requirements
 * [Liquidsoap 2.2.4](https://github.com/savonet/liquidsoap/releases) or later
