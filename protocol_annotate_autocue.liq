@@ -87,8 +87,8 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     frame = list.nth(frames,list.length(frames)-2)
     
     # Get the Integrated Loudness from the last frame (overall loudness)
-    lufs = float_of_string(frame["lavfi.r128.I"] ?? string(lufs_target))
-    
+    lufs = float_of_string(list.assoc(default=string(lufs_target), "lavfi.r128.I", frame))
+
     # Calc LUFS difference to target for liq_amplify
     lufs_correction = lufs_target - lufs
     
@@ -118,13 +118,16 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     cue_in_found = ref(false)
     last_ts = ref(0.)
     current_ts = ref(0.)
+
     def find_cues(frame) =
       # Get current frame loudness level and timestamp
-      db_level = (frame["lavfi_r128_M"] ?? "nan")
-      current_ts := float_of_string(frame["lavi.liq.pts"] ?? "0.")
+      db_level = list.assoc(default="nan", "lavfi_r128_M", frame)
+      current_ts := float_of_string(list.assoc(default="0.", "lavfi.liq.pts", frame))
+
       # Process only valid level values
       if db_level != "nan" then
         db_level = float_of_string(db_level)
+
         if db_level > lufs_cue_in_thresh and cue_in_found() == false then
           # First time exceeding threshold. Set cue in to timestamp of previous frame.
           cue_in := last_ts()
@@ -146,7 +149,7 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     
     # Get very last frame for precise track duration
     frame = list.last(frames)
-    duration = float_of_string(frame["lavi.liq.pts"] ?? "0.") + float_of_string(string(frame["lavi.liq.duration"] ?? "0."))
+    duration = float_of_string(list.assoc(default="0.", "lavfi.liq.pts", frame)) + float_of_string(list.assoc(default="0.", "lavfi.liq.duration", frame))
     
     # Finalize cue/cross/fade values now...
     
@@ -196,29 +199,31 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     fade_out := max(fade_out(),0.1)
     
     # Build annotation compliant string with metadata
-    cue_meta = ref("")
-    cue_meta := "#{cue_meta()}liq_amplify=\"#{string(lufs_correction)} dB\","
-    if cue_in() > 0. then cue_meta := "#{cue_meta()}liq_cue_in=\"#{cue_in()}\"," end
-    if cue_out() > 0. then cue_meta := "#{cue_meta()}liq_cue_out=\"#{cue_out()}\"," end
-    cue_meta := "#{cue_meta()}liq_cross_duration=\"#{cross_dur()}\","
-    cue_meta := "#{cue_meta()}liq_fade_in=\"#{fade_in()}\","
-    cue_meta := "#{cue_meta()}liq_fade_out=\"#{fade_out()}\","
+    cue_meta = ref([])
+
+    def append_meta(m) =
+      cue_meta := [...cue_meta(), m]
+    end
+
+    append_meta("liq_amplify=\"#{string(lufs_correction)} dB\"")
+    if cue_in() > 0. then append_meta("liq_cue_in=\"#{cue_in()}\"") end
+    if cue_out() > 0. then append_meta("liq_cue_out=\"#{cue_out()}\"") end
+    append_meta("liq_cross_duration=\"#{cross_dur()}\"")
+    append_meta("liq_fade_in=\"#{fade_in()}\"")
+    append_meta("liq_fade_out=\"#{fade_out()}\"")
     if fade_out_delay() > 0. then
-      cue_meta := "#{cue_meta()}liq_fade_out_delay=\"#{fade_out_delay()}\","
+      append_meta("liq_fade_out_delay=\"#{fade_out_delay()}\"")
       fade_out_curve := "log"
     end
-    cue_meta := "#{cue_meta()}liq_fade_in_curve=\"#{fade_in_curve()}\","  
-    cue_meta := "#{cue_meta()}liq_fade_out_curve=\"#{fade_out_curve()}\","  
+    append_meta("liq_fade_in_curve=\"#{fade_in_curve()}\"")
+    append_meta("liq_fade_out_curve=\"#{fade_out_curve()}\"")
+
+    cue_meta_response := string.concat(separator=",", cue_meta())
   
-    log(level=3,label="annotate-autocue","#{string.sub(cue_meta(),start=0,length=string.length(cue_meta())-1)}")
-    
-    # Return metadata for annotation injection
-    cue_meta_response := cue_meta()
-    
+    log(level=3,label="annotate-autocue","#{cue_meta_response()}")
   end
   
   cue_meta_response()
-  
 end
 
 # Define annotate-autocue protocol
@@ -240,19 +245,16 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
   skip_autocue = ref(false)
   
   # Parse annotation string
-  annotate_parts = string.annotate.parse(arg)
+  annotate_parts =
+    try
+      string.annotate.parse(arg)
+    catch _ do
+      ([], arg)
+    end
   
   # Filename extraction
   log(level=4, label="annotate-autocue", "#{annotate_parts}")
   media_uri = snd(annotate_parts)
-  
-  # Workaround for Azuracast Stations
-  try
-    test = station_media_dir
-    log(level=4,label="annotate-autocue","Azuracast station!")
-  catch _ do
-    log(level=4,label="annotate-autocue","Not an Azuracast station!")
-  end
   
   # Checking for existing cue/cross/fade values
   def find_existing_meta(part) =
@@ -270,13 +272,13 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
   #  log(level=1,label="annotate-autocue","Autocue aborted! File not found: #{filepath()}")
   #  skip_autocue := true
   #end
-  
+
   autocue_annotate = ref("")
   if skip_autocue() == false then
     # Get the auto cue annotation string
     cue_meta = get_autocue(media_uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
     # Rebuild and return annotation string
-    autocue_annotate := "annotate:#{cue_meta}#{arg}"   
+    autocue_annotate := "annotate:#{cue_meta}:#{arg}"   
     log(level=4,label="annotate-autocue","#{autocue_annotate}")
   else
     autocue_annotate := "annotate:#{arg}"   
