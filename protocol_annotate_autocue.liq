@@ -19,12 +19,56 @@ let settings.protocol.annotate_autocue.max_overlap =
 # Change default setting if needed
 settings.protocol.annotate_autocue.lufs_target := -16.0
 
+# Function: Get data from ffmpeg.filter.ebur128
+def ebur128_frames(uri) =
+  r = request.create(uri)
+  
+  if request.resolve(r) then
+  
+  s = request.once(r)
+  if s.resolve() then
+  
+    frames = ref([])
+
+    def ebur128(s) =
+      def mk_filter(graph) =
+        let {audio = a} = source.tracks(s)
+        a = ffmpeg.filter.audio.input(graph, a)
+        let ([a], _) = ffmpeg.filter.ebur128(metadata=true, graph, a)
+        a = ffmpeg.filter.audio.output(graph, a)
+        source({audio=a, metadata=track.metadata(a)})
+      end
+
+      ffmpeg.filter.create(mk_filter)
+    end
+
+    s = ebur128(s)
+    s = source.on_metadata(s, fun (m) -> frames := [...frames(), m])
+    source.drop(s)
+
+    frames()
+  else
+    log(level=1,label="annotate-autocue","Couldn't resolve source for uri: #{uri}")
+    []
+  end
+  else
+    log(level=1,label="annotate-autocue","Couldn't resolve request for uri: #{uri}")
+    []
+  end
+end
+
 # Do the auto cue magic
 def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap) =
 
   cue_meta_response = ref("")
 
-  # Run LS ffmpeg EBU R128 filter to retrieve loudness data per frame
+  # Run ffprobe EBU R128 filter to retrieve loudness data per frame 
+  #command = "ffprobe -v quiet -f lavfi -i amovie=#{string.quote(filepath)},ebur128=metadata=1 -show_frames -of json"
+  #result = process.read.lines(command)
+  #json_payload = string.concat(result)
+  #log(level=4,label="annotate-autocue","#{command}")
+  #log(level=4,label="annotate-autocue","#{json_payload}")
+  
   frames = ebur128_frames(filepath)
 
   ffprobe_success = ref(true)
@@ -43,7 +87,7 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     frame = list.nth(frames,list.length(frames)-2)
     
     # Get the Integrated Loudness from the last frame (overall loudness)
-    lufs = float_of_string(frame.tags.lavfi_r128_I ?? string(lufs_target))
+    lufs = float_of_string(frame["lavfi.r128.I"] ?? string(lufs_target))
     
     # Calc LUFS difference to target for liq_amplify
     lufs_correction = lufs_target - lufs
@@ -76,8 +120,8 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     current_ts = ref(0.)
     def find_cues(frame) =
       # Get current frame loudness level and timestamp
-      db_level = (frame.tags.lavfi_r128_M ?? "nan")
-      current_ts := float_of_string(frame.best_effort_timestamp_time ?? "0.")
+      db_level = (frame["lavfi_r128_M"] ?? "nan")
+      current_ts := float_of_string(frame["lavi.liq.pts"] ?? "0.")
       # Process only valid level values
       if db_level != "nan" then
         db_level = float_of_string(db_level)
@@ -102,7 +146,7 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     
     # Get very last frame for precise track duration
     frame = list.last(frames)
-    duration = float_of_string(frame.best_effort_timestamp_time ?? "0.") + float_of_string(string((frame.duration_time ?? "0.")))
+    duration = float_of_string(frame["lavi.liq.pts"] ?? "0.") + float_of_string(string(frame["lavi.liq.duration"] ?? "0."))
     
     # Finalize cue/cross/fade values now...
     
@@ -199,16 +243,15 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
   annotate_parts = string.annotate.parse(arg)
   
   # Filename extraction
-  uri_parts = string.split(separator=":",snd(annotate_parts))
-  filename = list.last(uri_parts)
-  filepath = ref(filename)
+  log(level=4, label="annotate-autocue", "#{annotate_parts}")
+  media_uri = snd(annotate_parts)
   
   # Workaround for Azuracast Stations
   try
-    filepath := "#{station_media_dir}/#{filename}"
-    log(level=4,label="annotate-autocue","Azuracast station! Adding station media directory to filename: #{station_media_dir}/#{filename}")
+    test = station_media_dir
+    log(level=4,label="annotate-autocue","Azuracast station!")
   catch _ do
-    log(level=4,label="annotate-autocue","Not an Azuracast station! Using filename as provided in annotation: #{filename}")
+    log(level=4,label="annotate-autocue","Not an Azuracast station!")
   end
   
   # Checking for existing cue/cross/fade values
@@ -223,15 +266,15 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
   end
   skip_autocue := list.exists(find_existing_meta, fst(annotate_parts))  
   
-  if file.exists(filepath()) == false then
-    log(level=1,label="annotate-autocue","Autocue aborted! File not found: #{filepath()}")
-    skip_autocue := true
-  end
+  #if file.exists(filepath()) == false then
+  #  log(level=1,label="annotate-autocue","Autocue aborted! File not found: #{filepath()}")
+  #  skip_autocue := true
+  #end
   
   autocue_annotate = ref("")
   if skip_autocue() == false then
     # Get the auto cue annotation string
-    cue_meta = get_autocue(filepath(),lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
+    cue_meta = get_autocue(media_uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
     # Rebuild and return annotation string
     autocue_annotate := "annotate:#{cue_meta}#{arg}"   
     log(level=4,label="annotate-autocue","#{autocue_annotate}")
