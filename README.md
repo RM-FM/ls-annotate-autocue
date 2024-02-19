@@ -16,8 +16,7 @@ Cue/crossfade points are calculated relative to LUFS target loudness. This ensur
 * Maximum crossfade/overlap duration
 
 ## Requirements
-* [Liquidsoap 2.2.4](https://github.com/savonet/liquidsoap/releases) or later
-* [ffprobe binary](https://ffbinaries.com/downloads)
+* [Liquidsoap 2.2.5 (Rolling Release 2.2.x)](https://github.com/savonet/liquidsoap/releases)
 
 ## Usage
 
