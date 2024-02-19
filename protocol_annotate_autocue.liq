@@ -267,7 +267,7 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
     # Get the auto cue annotation string
     cue_meta = get_autocue(media_uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
     # Rebuild and return annotation string
-    autocue_annotate := "annotate:#{cue_meta}:#{arg}"   
+    autocue_annotate := "annotate:#{cue_meta},#{arg}"   
     log(level=4,label="annotate-autocue","#{autocue_annotate}")
   else
     autocue_annotate := "annotate:#{arg}"   
