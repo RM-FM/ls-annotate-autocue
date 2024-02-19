@@ -1,4 +1,4 @@
-# Initilize settings for annotate-autocue protocol
+# Initilize settings for annotate-autocue protocol
 let settings.protocol.annotate_autocue = settings.make.protocol("annotate-autocue")
 
 let settings.protocol.annotate_autocue.lufs_target =
@@ -27,7 +27,7 @@ def ebur128_frames(uri) =
   
   s = request.once(r)
   if s.resolve() then
-  
+    
     frames = ref([])
 
     def ebur128(s) =
@@ -40,6 +40,7 @@ def ebur128_frames(uri) =
       end
 
       ffmpeg.filter.create(mk_filter)
+      
     end
 
     s = ebur128(s)
@@ -58,18 +59,12 @@ def ebur128_frames(uri) =
 end
 
 # Do the auto cue magic
-def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap) =
+def get_autocue(uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap) =
 
   cue_meta_response = ref("")
 
   # Run ffprobe EBU R128 filter to retrieve loudness data per frame 
-  #command = "ffprobe -v quiet -f lavfi -i amovie=#{string.quote(filepath)},ebur128=metadata=1 -show_frames -of json"
-  #result = process.read.lines(command)
-  #json_payload = string.concat(result)
-  #log(level=4,label="annotate-autocue","#{command}")
-  #log(level=4,label="annotate-autocue","#{json_payload}")
-  
-  frames = ebur128_frames(filepath)
+  frames = ebur128_frames(uri)
 
   ffprobe_success = ref(true)
   try
@@ -121,7 +116,7 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
 
     def find_cues(frame) =
       # Get current frame loudness level and timestamp
-      db_level = list.assoc(default="nan", "lavfi_r128_M", frame)
+      db_level = list.assoc(default="nan", string("lavfi.r128.M"), frame)
       current_ts := float_of_string(list.assoc(default="0.", "lavfi.liq.pts", frame))
 
       # Process only valid level values
@@ -221,6 +216,7 @@ def get_autocue(filepath,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,m
     cue_meta_response := string.concat(separator=",", cue_meta())
   
     log(level=3,label="annotate-autocue","#{cue_meta_response()}")
+    
   end
   
   cue_meta_response()
@@ -267,14 +263,10 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
     skip_autocue()
   end
   skip_autocue := list.exists(find_existing_meta, fst(annotate_parts))  
-  
-  #if file.exists(filepath()) == false then
-  #  log(level=1,label="annotate-autocue","Autocue aborted! File not found: #{filepath()}")
-  #  skip_autocue := true
-  #end
 
   autocue_annotate = ref("")
   if skip_autocue() == false then
+    log(level=4,label="annotate-autocue","debug row 287")
     # Get the auto cue annotation string
     cue_meta = get_autocue(media_uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
     # Rebuild and return annotation string
