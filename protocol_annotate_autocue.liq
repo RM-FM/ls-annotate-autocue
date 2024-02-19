@@ -1,4 +1,4 @@
-# Initialize settings for annotate-autocue protocol
+Initialize settings for annotate-autocue protocol
 let settings.protocol.annotate_autocue = settings.make.protocol("annotate-autocue")
 
 let settings.protocol.annotate_autocue.lufs_target =
