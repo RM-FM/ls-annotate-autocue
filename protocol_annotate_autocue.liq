@@ -1,4 +1,4 @@
-# Initilize settings for annotate-autocue protocol
+# Initialize settings for annotate-autocue protocol
 let settings.protocol.annotate_autocue = settings.make.protocol("annotate-autocue")
 
 let settings.protocol.annotate_autocue.lufs_target =
@@ -248,10 +248,6 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
       ([], arg)
     end
   
-  # Filename extraction
-  log(level=4, label="annotate-autocue", "#{annotate_parts}")
-  media_uri = snd(annotate_parts)
-  
   # Checking for existing cue/cross/fade values
   def find_existing_meta(part) =
     metadata_key = fst(part)
@@ -266,7 +262,8 @@ def annotate_autocue_protocol(~rlog=_,~maxtime=_,arg) =
 
   autocue_annotate = ref("")
   if skip_autocue() == false then
-    log(level=4,label="annotate-autocue","debug row 287")
+    # URI extraction
+    media_uri = snd(annotate_parts)
     # Get the auto cue annotation string
     cue_meta = get_autocue(media_uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_overlap)
     # Rebuild and return annotation string
