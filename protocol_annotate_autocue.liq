@@ -186,6 +186,7 @@ def get_autocue(uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_ov
     if cue_out() > 0. and cross_dur() < 2.0 then
       fade_out := max(cross_dur()/2., 0.1)
       fade_out_delay := fade_out()
+      fade_out_curve := "log" # lowering the volume slowly first and drop it faster at the end
     end
       
     # Force minimum overlap to avoid invalid crossfades
