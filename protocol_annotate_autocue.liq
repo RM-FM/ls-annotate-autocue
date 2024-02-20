@@ -2,7 +2,7 @@
 let settings.protocol.annotate_autocue = settings.make.protocol("annotate-autocue")
 
 let settings.protocol.annotate_autocue.lufs_target =
-  settings.make(description="Loudness target in LUFS (float)", -18.0)
+  settings.make(description="Loudness target in LUFS (float)", -16.0)
   
 let settings.protocol.annotate_autocue.cue_in_thresh =
   settings.make(description="Threshold for Cue In relative to LUFS (float)", -34.0)
