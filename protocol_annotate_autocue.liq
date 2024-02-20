@@ -1,4 +1,4 @@
-Initialize settings for annotate-autocue protocol
+#Initialize settings for annotate-autocue protocol
 let settings.protocol.annotate_autocue = settings.make.protocol("annotate-autocue")
 
 let settings.protocol.annotate_autocue.lufs_target =
@@ -15,9 +15,6 @@ let settings.protocol.annotate_autocue.cross_thresh =
   
 let settings.protocol.annotate_autocue.max_overlap =
   settings.make(description="Max. allowed overlap/crossfade in seconds (float)", 6.0)
-
-# Change default setting if needed
-settings.protocol.annotate_autocue.lufs_target := -16.0
 
 # Function: Get data from ffmpeg.filter.ebur128
 def ebur128_frames(uri) =
@@ -190,9 +187,9 @@ def get_autocue(uri,lufs_target,cue_in_thresh,cue_out_thresh,cross_thresh,max_ov
     end
       
     # Force minimum overlap to avoid invalid crossfades
-    cross_dur := max(cross_dur(),0.1)
-    fade_in := max(fade_in(),0.1)
-    fade_out := max(fade_out(),0.1)
+    #cross_dur := max(cross_dur(),0.1)
+    #fade_in := max(fade_in(),0.1)
+    #fade_out := max(fade_out(),0.1)
     
     # Build annotation compliant string with metadata
     cue_meta = ref([])
