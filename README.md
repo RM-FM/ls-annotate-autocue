@@ -1,6 +1,5 @@
 # ls-annotate-autocue
 
-## Deprecation notice
 > [!CAUTION]
 > This repo has been discontinued.
 
@@ -15,7 +14,7 @@
 > Please check the official Liquidsoap documenation for more details:
 > - https://www.liquidsoap.info/doc-dev/reference.html#enable_autocue_metadata
 > - https://www.liquidsoap.info/doc-dev/reference.html#settings.autocue
-> - https://www.liquidsoap.info/doc-dev/protocols.html#autocue)
+> - https://www.liquidsoap.info/doc-dev/protocols.html#autocue
 
 ## Features
 
